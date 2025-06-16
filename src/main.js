@@ -67,6 +67,7 @@ app.whenReady().then(() => {
         width: 400,
         height: 600,
         show: false,
+        icon: path.join(__dirname, '..', 'icon.png'),
         autoHideMenuBar: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js')
