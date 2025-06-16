@@ -3,9 +3,70 @@
 <head>
   <meta charset="UTF-8">
   <title>Links Guardados</title>
+  <link rel="stylesheet" href="styles/style.css">
 </head>
 <body>
-  <h1>Links</h1>
+  <section class="section-title-links">
+    <h1>Links Saved</h1>
+  </section>
+  <section class="section-search">
+    <input type="text" id="searchBox" placeholder="Buscar links...">
+  </section>
+  <section class="section-content-links">
+  </section>
+  
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      const sectionContent = document.querySelector('.section-content-links');
+      const searchBox = document.getElementById('searchBox');
+      let allLinks = [];
 
+      function renderLinks(links) {
+        sectionContent.innerHTML = '';
+        links.forEach(link => {
+          const container = document.createElement('div');
+          container.className = 'link-container';
+          
+          const linkText = document.createElement('span');
+          linkText.className = 'link-text';
+          linkText.innerHTML = `<i class="fa fa-link" aria-hidden="true"></i> ${link}`;
+          
+          const button = document.createElement('button');
+          button.className = 'link-button';
+          button.textContent = 'Abrir en navegador';
+          button.addEventListener('click', () => {
+            window.api.openLink(link);
+          });
+          
+          container.appendChild(linkText);
+          container.appendChild(button);
+          sectionContent.appendChild(container);
+        });
+      }
+      
+      // Cargar links completos y guardarlos en allLinks
+      function loadLinks() {
+        window.api.getLinks().then((links) => {
+          allLinks = links;
+          renderLinks(allLinks);
+        }).catch(err => {
+          console.error("Error obteniendo los links:", err);
+        });
+      }
+      
+      loadLinks();
+      
+      searchBox.addEventListener('input', () => {
+        const searchValue = searchBox.value.toLowerCase();
+        const filtered = allLinks.filter(link => link.toLowerCase().includes(searchValue));
+        renderLinks(filtered);
+      });
+      
+      window.api.onLinksUpdated(() => {
+        loadLinks();
+      });
+    });
+  </script>
+  <script src="https://use.fontawesome.com/releases/v5.15.4/js/all.js" data-auto-replace-svg></script>
 </body>
 </html>

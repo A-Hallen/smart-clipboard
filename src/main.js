@@ -1,14 +1,15 @@
-const { app, BrowserWindow, Tray, Menu, clipboard } = require('electron');
+const { app, BrowserWindow, Tray, Menu, clipboard, ipcMain, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
-text_latest = ""
+let text_latest = "";
+let tray;
+let win;
 
 function readClipboard(){
     setInterval(() => {
         text_latest = clipboard.readText();
         if(isURL(text_latest)){
-            console.log("Link detectado: " + text_latest);
             storeLink(text_latest);
         }
     }, 2000);
@@ -20,7 +21,7 @@ function isURL(text) {
 }
 
 function storeLink(link) {
-    const dbPath = path.join(__dirname, 'links.json');
+    const dbPath = path.join(__dirname, 'data/links.json');
     let links = [];
     if(fs.existsSync(dbPath)) {
         try {
@@ -35,23 +36,71 @@ function storeLink(link) {
     if(!links.includes(link)){
         links.push(link);
         fs.writeFileSync(dbPath, JSON.stringify(links, null, 2));
-        console.log("Link guardado en la base de datos.");
+        if(win && win.webContents) {
+            win.webContents.send('links-updated');
+        }
     }
 }
 
-app.whenReady().then(() => {
-    const contextMenu = Menu.buildFromTemplate([
-        { label: 'Salir', click: () => app.quit() }
-    ]);
+ipcMain.handle('get-links', () => {
+    const dbPath = path.join(__dirname, 'data/links.json');
+    let links = [];
+    if(fs.existsSync(dbPath)){
+         try {
+             links = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+             if (!Array.isArray(links)) {
+                 links = [];
+             }
+         } catch (error) {
+             console.error("Error al leer la base de datos:", error);
+         }
+    }
+    return links;
+});
 
-    const win = new BrowserWindow({
+ipcMain.handle('open-link', (event, link) => {
+    shell.openExternal(link);
+});
+
+app.whenReady().then(() => {
+    win = new BrowserWindow({
         width: 400,
         height: 600,
+        show: false,
+        autoHideMenuBar: true,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js')
         }
     });
+    
     win.loadFile('index.html');
+    
+    const contextMenu = Menu.buildFromTemplate([
+        { label: 'Mostrar/Ocultar', click: () => { win.isVisible() ? win.hide() : win.show(); } },
+        { label: 'Salir', click: () => {
+            app.isQuitting = true; // Indicamos que se quiere salir realmente
+            app.quit();
+        }}
+    ]);
+    
+    const trayIcon = path.join(__dirname, '..', 'icon.png');
+    tray = new Tray(trayIcon);
+    tray.setToolTip('Save Links App');
+    tray.setContextMenu(contextMenu);
+    
+    tray.on('double-click', () => {
+        win.isVisible() ? win.hide() : win.show();
+    });
+    
+    // Interceptar el cierre para que oculte la ventana y no termine la app
+    win.on('close', (event) => {
+        if (!app.isQuitting) {
+            event.preventDefault();
+            win.hide();
+        }
+    });
+    
+    win.show();
 
     readClipboard();
 });
