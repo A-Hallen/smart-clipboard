@@ -92,7 +92,6 @@ app.whenReady().then(() => {
         win.isVisible() ? win.hide() : win.show();
     });
     
-    // Interceptar el cierre para que oculte la ventana y no termine la app
     win.on('close', (event) => {
         if (!app.isQuitting) {
             event.preventDefault();
