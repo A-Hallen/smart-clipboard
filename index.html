@@ -47,7 +47,7 @@
       // Cargar links completos y guardarlos en allLinks
       function loadLinks() {
         window.api.getLinks().then((links) => {
-          allLinks = links;
+          allLinks = [...links].reverse();
           renderLinks(allLinks);
         }).catch(err => {
           console.error("Error obteniendo los links:", err);
