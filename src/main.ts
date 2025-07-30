@@ -233,7 +233,7 @@ const createTray = () => {
   ]);
 
   tray.setContextMenu(contextMenu);
-  tray.setToolTip('Clipboard Manager');
+  tray.setToolTip('Smart Clipboard');
   
   // Doble clic para mostrar ventana
   tray.on('double-click', () => {

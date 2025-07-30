@@ -8,6 +8,8 @@ interface ClipboardSyncManagerProps {
   syncState: ClipboardSyncState;
   syncActions: ClipboardSyncActions;
   setClipboardHistory: React.Dispatch<React.SetStateAction<ClipboardItem[]>>;
+  deletingItems: Set<string>;
+  setDeletingItems: React.Dispatch<React.SetStateAction<Set<string>>>;
 }
 
 /**
@@ -18,60 +20,44 @@ const ClipboardSyncManager: React.FC<ClipboardSyncManagerProps> = ({
   authState,
   syncState,
   syncActions,
-  setClipboardHistory
+  setClipboardHistory,
+  deletingItems,
 }) => {
-  // Usar el historial de Firestore cuando está disponible y evitar duplicados
+  // Sincronizar items entre Firebase y local
   useEffect(() => {
-    const mergeItems = async () => {
+    const loadItems = async () => {
       try {
-        // Si hay items en Firestore, usarlos como base
-        if (syncState.items.length > 0) {
-          if (authState.user && !authState.isLoading) {
-            // Si estamos autenticados, usar los items de Firebase como fuente principal
-            // pero asegurarse de que no haya duplicados con los items locales
+        if (authState.user && !authState.isLoading) {
+          // Usuario autenticado
+          if (syncState.items.length > 0) {
+            // Usar items de Firebase como fuente principal
+            const filteredItems = syncState.items.filter(
+              item => !deletingItems.has(item.id)
+            );
+            setClipboardHistory(filteredItems);
+          } else if (!syncState.isLoading) {
+            // Sin items en Firebase, usar historial local
             const localHistory = await window.electronAPI.getClipboardHistory();
-            
-            // Crear un mapa de contenidos de Firebase para verificación rápida
-            const firebaseContentMap = new Map(
-              syncState.items.map(item => [item.content, item])
+            const filteredLocalHistory = localHistory.filter(
+              item => !deletingItems.has(item.id)
             );
-            
-            // Encontrar items locales que no estén en Firebase
-            const uniqueLocalItems = localHistory.filter(
-              localItem => !firebaseContentMap.has(localItem.content)
-            );
-            
-            // Si hay items locales únicos, sincronizarlos con Firebase
-            if (uniqueLocalItems.length > 0) {
-              uniqueLocalItems.forEach(async (item: ClipboardItem) => {
-                await syncActions.addItem({
-                  content: item.content,
-                  timestamp: item.timestamp,
-                  type: item.type,
-                  createdAt: item.createdAt || item.timestamp
-                });
-              });
-            }
-            
-            // Usar solo los items de Firebase para mostrar
-            setClipboardHistory(syncState.items);
-          } else {
-            // Si no estamos autenticados pero hay items en Firebase (raro),
-            // usar los items de Firebase
-            setClipboardHistory(syncState.items);
+            setClipboardHistory(filteredLocalHistory);
           }
-        } else if (!syncState.isLoading) {
-          // Si no hay items en Firestore, cargar el historial local
+        } else if (!authState.isLoading) {
+          // Usuario no autenticado: usar solo historial local
           const localHistory = await window.electronAPI.getClipboardHistory();
-          setClipboardHistory(localHistory);
+          const filteredLocalHistory = localHistory.filter(
+            item => !deletingItems.has(item.id)
+          );
+          setClipboardHistory(filteredLocalHistory);
         }
       } catch (error) {
-        console.error('Error al cargar o sincronizar el historial:', error);
+        console.error('Error al cargar el historial:', error);
       }
     };
     
-    mergeItems();
-  }, [syncState.items, syncState.isLoading, authState.user, authState.isLoading, syncActions, setClipboardHistory]);
+    loadItems();
+  }, [syncState.items, syncState.isLoading, authState.user, authState.isLoading, setClipboardHistory, deletingItems]);
 
   // Escuchar actualizaciones del portapapeles desde Electron
   useEffect(() => {

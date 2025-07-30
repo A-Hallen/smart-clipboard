@@ -2,19 +2,28 @@
 
 Una aplicación de escritorio desarrollada con Electron que proporciona un historial inteligente del portapapeles con sincronización en la nube y organización por pestañas.
 
-## 📸 Capturas de Pantalla
-
-### Interfaz Principal
-<!-- Agregar captura de pantalla de la interfaz principal aquí -->
-
-### Organización por Pestañas
-<!-- Agregar captura de pantalla mostrando las pestañas de Enlaces y Otros aquí -->
-
-### Vista Previa de Enlaces
-<!-- Agregar captura de pantalla de la vista previa de enlaces aquí -->
-
-### Modo Oscuro
-<!-- Agregar captura de pantalla del modo oscuro aquí -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; justify-items: center; max-width: 800px; margin: 0 auto;">
+  <div style="text-align: center;">
+    <img src="capturas/light-mode.png" alt="Modo Claro" style="max-height: 400px; width: auto;"/>
+    <br><b>Modo Claro</b>
+  </div>
+  <div style="text-align: center;">
+    <img src="capturas/dark-mode.png" alt="Modo Oscuro" style="max-height: 400px; width: auto;"/>
+    <br><b>Modo Oscuro</b>
+  </div>
+  <div style="text-align: center;">
+    <img src="capturas/code-preview.png" alt="Vista Previa de Código" style="max-height: 400px; width: auto;"/>
+    <br><b>Vista Previa de Código</b>
+  </div>
+  <div style="text-align: center;">
+    <img src="capturas/image-preview.png" alt="Vista Previa de Imágenes" style="max-height: 400px; width: auto;"/>
+    <br><b>Vista Previa de Imágenes</b>
+  </div>
+  <div style="text-align: center;">
+    <img src="capturas/login-preview.png" alt="Pantalla de Login" style="max-height: 400px; width: auto;"/>
+    <br><b>Pantalla de Login</b>
+  </div>
+</div>
 
 ## 🚀 Características
 
@@ -114,7 +123,7 @@ graph TD
 
 1. **Clonar el repositorio**
 ```bash
-git clone <repository-url>
+git clone https://github.com/A-Hallen/smart-clipboard
 cd gemini
 ```
 
@@ -130,12 +139,15 @@ pnpm install
    - Configurar Authentication y Firestore
    - Crear archivo `.env` con las credenciales:
 ```env
-VITE_FIREBASE_API_KEY=your_api_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
+VITE_GOOGLE_CLIENT_ID = your_google_client_id
+VITE_GOOGLE_CLIENT_SECRET = your_google_client_secret
+VITE_API_KEY = your_api_key
+VITE_AUTH_DOMAIN = your_auth_domain
+VITE_PROJECT_ID = your_project_id
+VITE_STORAGE_BUCKET = your_storage_bucket
+VITE_MESSAGING_SENDER_ID = your_messaging_sender_id
+VITE_APP_ID = your_app_id
+VITE_MEASSUREMENT_ID = your_measurement_id
 ```
 
 4. **Ejecutar en modo desarrollo**

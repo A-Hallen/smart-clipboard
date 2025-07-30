@@ -29,6 +29,7 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'links' | 'other'>('all');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
 
   const openDialog = (id: string, content: string) => {
     setShowModal(true);
@@ -49,18 +50,55 @@ const App: React.FC = () => {
 
   // Función para eliminar un elemento del historial
   const handleDeleteItem = async (id: string) => {
+    // Evitar eliminaciones múltiples del mismo item
+    if (deletingItems.has(id)) {
+      return;
+    }
+
     try {
-      // Si estamos autenticados, eliminar de Firestore
+      // Marcar el item como "siendo eliminado"
+      setDeletingItems(prev => new Set([...prev, id]));
+      
+      // ELIMINACIÓN OPTIMISTA: Remover inmediatamente de la UI
+      setClipboardHistory(prev => prev.filter(item => item.id !== id));
+      
+      // Siempre eliminar localmente primero (para soporte offline)
+      await window.electronAPI.deleteClipboardItem(id);
+      
+      // Si estamos autenticados y online, también eliminar de Firestore
+      if (authState.user && !authState.isLoading && syncState.syncStatus !== 'offline') {
+        try {
+          await syncActions.deleteItem(id);
+        } catch (error) {
+          console.error('Error al eliminar de Firestore (modo offline?):', error);
+          // No es crítico si falla - se sincronizará cuando vuelva online
+        }
+      }
+      
+      // Remover del estado de eliminación tras éxito
+      setDeletingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      
+    } catch (error) {
+      console.error('Error al eliminar elemento:', error);
+      
+      // Remover del estado de eliminación en caso de error
+      setDeletingItems(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      
+      // En caso de error, restaurar el elemento en la UI
       if (authState.user && !authState.isLoading) {
-        await syncActions.deleteItem(id);
+        // Si estamos autenticados, el efecto de sincronización restaurará el estado
       } else {
-        // Si no, eliminar localmente
-        await window.electronAPI.deleteClipboardItem(id);
         const updatedHistory = await window.electronAPI.getClipboardHistory();
         setClipboardHistory(updatedHistory);
       }
-    } catch (error) {
-      console.error('Error al eliminar elemento:', error);
     }
   };
 
@@ -121,6 +159,8 @@ const App: React.FC = () => {
         syncState={syncState}
         syncActions={syncActions}
         setClipboardHistory={setClipboardHistory}
+        deletingItems={deletingItems}
+        setDeletingItems={setDeletingItems}
       />
       
       <motion.main 
@@ -140,12 +180,12 @@ const App: React.FC = () => {
                 
           <AnimatePresence>
             {showModal && (
-              <ContentDialog
-                key="content-dialog"
-                onClose={() => setShowModal(false)}
-                content={itemContent}
-                itemId={itemId}
-                onCopy={handleCopyToClipboard}
+                <ContentDialog
+                  key="content-dialog"
+                  onClose={() => setShowModal(false)}
+                  content={itemContent}
+                  itemId={itemId}
+                  onCopy={handleCopyToClipboard}
                 isCopied={isCopied}
                 isDarkMode={isDarkMode}
                 onSave={(newContent) => handleUpdateItem(itemId, newContent)}
