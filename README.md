@@ -2,28 +2,36 @@
 
 Una aplicación de escritorio desarrollada con Electron que proporciona un historial inteligente del portapapeles con sincronización en la nube y organización por pestañas.
 
-<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; justify-items: center; max-width: 800px; margin: 0 auto;">
-  <div style="text-align: center;">
-    <img src="capturas/light-mode.png" alt="Modo Claro" style="max-height: 400px; width: auto;"/>
-    <br><b>Modo Claro</b>
-  </div>
-  <div style="text-align: center;">
-    <img src="capturas/dark-mode.png" alt="Modo Oscuro" style="max-height: 400px; width: auto;"/>
-    <br><b>Modo Oscuro</b>
-  </div>
-  <div style="text-align: center;">
-    <img src="capturas/code-preview.png" alt="Vista Previa de Código" style="max-height: 400px; width: auto;"/>
-    <br><b>Vista Previa de Código</b>
-  </div>
-  <div style="text-align: center;">
-    <img src="capturas/image-preview.png" alt="Vista Previa de Imágenes" style="max-height: 400px; width: auto;"/>
-    <br><b>Vista Previa de Imágenes</b>
-  </div>
-  <div style="text-align: center;">
-    <img src="capturas/login-preview.png" alt="Pantalla de Login" style="max-height: 400px; width: auto;"/>
-    <br><b>Pantalla de Login</b>
-  </div>
-</div>
+## 📸 Capturas de Pantalla
+
+<table>
+  <tr>
+    <td align="center">
+      <img src="capturas/light-mode.png" alt="Modo Claro"/>
+      <br><b>Modo Claro</b>
+    </td>
+    <td align="center">
+      <img src="capturas/dark-mode.png" alt="Modo Oscuro"/>
+      <br><b>Modo Oscuro</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="capturas/code-preview.png" alt="Vista Previa de Código"/>
+      <br><b>Vista Previa de Código</b>
+    </td>
+    <td align="center">
+      <img src="capturas/image-preview.png" alt="Vista Previa de Imágenes"/>
+      <br><b>Vista Previa de Imágenes</b>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2">
+      <img src="capturas/login-preview.png" alt="Pantalla de Login"/>
+      <br><b>Pantalla de Login</b>
+    </td>
+  </tr>
+</table>
 
 ## 🚀 Características
 
