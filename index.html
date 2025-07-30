@@ -1,72 +1,15 @@
 <!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>Links Guardados</title>
-  <link rel="stylesheet" href="styles/style.css">
-</head>
-<body>
-  <section class="section-title-links">
-    <h1>Links Saved</h1>
-  </section>
-  <section class="section-search">
-    <input type="text" id="searchBox" placeholder="Buscar links...">
-  </section>
-  <section class="section-content-links">
-  </section>
-  
-  <script>
-    window.addEventListener('DOMContentLoaded', () => {
-      const sectionContent = document.querySelector('.section-content-links');
-      const searchBox = document.getElementById('searchBox');
-      let allLinks = [];
-
-      function renderLinks(links) {
-        sectionContent.innerHTML = '';
-        links.forEach(link => {
-          const container = document.createElement('div');
-          container.className = 'link-container';
-          
-          const linkText = document.createElement('span');
-          linkText.className = 'link-text';
-          linkText.innerHTML = `<i class="fa fa-link" aria-hidden="true"></i> ${link}`;
-          
-          const button = document.createElement('button');
-          button.className = 'link-button';
-          button.textContent = 'Abrir en navegador';
-          button.addEventListener('click', () => {
-            window.api.openLink(link);
-          });
-          
-          container.appendChild(linkText);
-          container.appendChild(button);
-          sectionContent.appendChild(container);
-        });
-      }
-      
-      // Cargar links completos y guardarlos en allLinks
-      function loadLinks() {
-        window.api.getLinks().then((links) => {
-          allLinks = [...links].reverse();
-          renderLinks(allLinks);
-        }).catch(err => {
-          console.error("Error obteniendo los links:", err);
-        });
-      }
-      
-      loadLinks();
-      
-      searchBox.addEventListener('input', () => {
-        const searchValue = searchBox.value.toLowerCase();
-        const filtered = allLinks.filter(link => link.toLowerCase().includes(searchValue));
-        renderLinks(filtered);
-      });
-      
-      window.api.onLinksUpdated(() => {
-        loadLinks();
-      });
-    });
-  </script>
-  <script src="https://use.fontawesome.com/releases/v5.15.4/js/all.js" data-auto-replace-svg></script>
-</body>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Observador de Portapapeles</title>
+    <!-- Los estilos de Tailwind se cargarán desde el archivo CSS compilado -->
+    <meta name="theme-color" content="#3B82F6">
+    <!-- Los estilos se cargan desde el archivo CSS compilado -->
+  </head>
+  <body class="min-h-screen">
+    <div id="root"></div>
+    <script type="module" src="/src/renderer.tsx"></script>
+  </body>
 </html>
