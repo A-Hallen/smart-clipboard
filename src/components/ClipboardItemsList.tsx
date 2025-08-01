@@ -2,15 +2,18 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ClipboardItem } from '../main';
 import { ClipboardItemCard } from '../ClipboardItemCard';
-import { Tabs } from './Tabs';
+import { BottomNavBar } from './BottomNavBar';
 import { filterClipboardItems, countItemsByType } from '../utils/contentUtils';
+
+type TabType = 'all' | 'links' | 'other' | 'favorites';
 
 interface ClipboardItemsListProps {
   clipboardHistory: ClipboardItem[];
-  activeTab: 'all' | 'links' | 'other';
-  setActiveTab: (tab: 'all' | 'links' | 'other') => void;
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
   handleDeleteItem: (id: string) => Promise<void>;
   onOpenDialog: (id: string, content: string) => void;
+  handleFavItem: (id: string, value: boolean) => Promise<void>;
 }
 
 /**
@@ -22,7 +25,8 @@ const ClipboardItemsList: React.FC<ClipboardItemsListProps> = ({
   activeTab,
   setActiveTab,
   handleDeleteItem,
-  onOpenDialog
+  onOpenDialog,
+  handleFavItem
 }) => {
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -38,6 +42,9 @@ const ClipboardItemsList: React.FC<ClipboardItemsListProps> = ({
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
+  
+  // Obtener contadores por tipo
+  const counts = countItemsByType(clipboardHistory);
 
   // Si no hay elementos, mostrar mensaje vacío
   if (clipboardHistory.length === 0) {
@@ -87,38 +94,80 @@ const ClipboardItemsList: React.FC<ClipboardItemsListProps> = ({
       animate="visible"
       key="history-list"
     >
-      {/* Pestañas para filtrar contenido */}
-      <motion.div variants={itemVariants}>
-        <Tabs 
-          tabs={[
-            { id: 'all', label: 'Todos', count: countItemsByType(clipboardHistory).all },
-            { id: 'links', label: 'Enlaces', count: countItemsByType(clipboardHistory).links },
-            { id: 'other', label: 'Otros', count: countItemsByType(clipboardHistory).other }
+      {/* Contenido principal con padding para la barra inferior */}
+      <div className="pb-16">  {/* Añadimos padding-bottom para dejar espacio para la barra inferior */}
+        <div className="overflow-y-auto max-h-full pr-2 py-2">
+          {filterClipboardItems(clipboardHistory, activeTab).map((item) => (
+            <motion.div
+              key={item.id}
+              layout
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, x: -100, height: 0 }}
+              transition={{ duration: 0.2 }}
+              className="mb-4"
+            >
+              <ClipboardItemCard 
+                item={item} 
+                handleDeleteItem={handleDeleteItem}
+                handleFavItem={handleFavItem}
+                onOpenDialog={onOpenDialog}
+              />
+            </motion.div>
+          ))}
+        </div>
+      </div>
+      
+      {/* Barra de navegación inferior */}
+      <motion.div variants={itemVariants} className="fixed bottom-0 left-0 right-0 z-10">
+        <BottomNavBar 
+          options={[
+            { 
+              id: 'all', 
+              label: 'Todos', 
+              count: counts.all,
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+              )
+            },
+            { 
+              id: 'links', 
+              label: 'Enlaces', 
+              count: counts.links,
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+              )
+            },
+            { 
+              id: 'other', 
+              label: 'Otros', 
+              count: counts.other,
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              )
+            },
+            { 
+              id: 'favorites', 
+              label: 'Favoritos', 
+              count: counts.favorites,
+              icon: (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                </svg>
+              )
+            }
           ]}
-          activeTab={activeTab}
-          onTabChange={(tabId) => setActiveTab(tabId as 'all' | 'links' | 'other')}
+          activeOption={activeTab}
+          onOptionChange={(tabId) => setActiveTab(tabId as TabType)}
         />
       </motion.div>
-      
-      <div className="overflow-y-auto max-h-full pr-2 py-2">
-        {filterClipboardItems(clipboardHistory, activeTab).map((item) => (
-          <motion.div
-            key={item.id}
-            layout
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, x: -100, height: 0 }}
-            transition={{ duration: 0.2 }}
-            className="mb-4"
-          >
-            <ClipboardItemCard 
-              item={item} 
-              handleDeleteItem={handleDeleteItem}
-              onOpenDialog={onOpenDialog}
-            />
-          </motion.div>
-        ))}
-      </div>
     </motion.div>
   );
 };

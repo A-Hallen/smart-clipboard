@@ -11,7 +11,7 @@ declare global {
       onClipboardUpdate: (callback: (event: any, history: ClipboardItem[]) => void) => () => void;
       copyToClipboard: (text: string) => void;
       deleteClipboardItem: (id: string) => Promise<boolean>;
-      updateClipboardItem: (id: string, newContent: string) => Promise<boolean>;
+      updateClipboardItem: (id: string, newItem: Partial<ClipboardItem>) => Promise<boolean>;
       openExternalUrl: (url: string) => Promise<boolean>;
       // APIs para el manejo del protocolo de autenticación personalizado
       onAuthCallback: (callback: (event: any, url: string) => void) => () => void;

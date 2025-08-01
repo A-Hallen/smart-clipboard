@@ -38,6 +38,7 @@ export interface ClipboardItem {
   timestamp: number;
   type: 'text' | 'image' | 'file';
   createdAt?: number; // Fecha de creación (opcional para compatibilidad con código existente)
+  isFavorite: boolean;
 }
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -90,7 +91,8 @@ const handleClipboardCopy = (): void => {
       id: generateId(),
       content,
       timestamp: Date.now(),
-      type: 'text'
+      type: 'text',
+      isFavorite: false
     };
     
     clipboardHistory.unshift(newItem); // Agregar al inicio del array

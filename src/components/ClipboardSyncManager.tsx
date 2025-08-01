@@ -69,7 +69,8 @@ const ClipboardSyncManager: React.FC<ClipboardSyncManagerProps> = ({
             content: newItem.content,
             timestamp: newItem.timestamp,
             type: newItem.type,
-            createdAt: newItem.createdAt || newItem.timestamp
+            createdAt: newItem.createdAt || newItem.timestamp,
+            isFavorite: newItem.isFavorite
           });
         }
       } else {

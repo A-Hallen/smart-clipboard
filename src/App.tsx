@@ -9,6 +9,7 @@ import AuthModal from './components/AuthModal';
 import LogoutModal from './components/LogoutModal';
 import ClipboardSyncManager from './components/ClipboardSyncManager';
 import ClipboardItemsList from './components/ClipboardItemsList';
+import SearchModal from './components/SearchModal';
 import './index.css';
 
 
@@ -21,20 +22,27 @@ const App: React.FC = () => {
   const [syncState, syncActions] = useClipboardSync(authState.user);
   
   const [clipboardHistory, setClipboardHistory] = useState<ClipboardItem[]>([]);
+  type TabType = 'all' | 'links' | 'other' | 'favorites';
   const [isDarkMode, setIsDarkMode] = useState(window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [showModal, setShowModal] = useState(false);
   const [itemContent, setItemContent] = useState('');
   const [itemId, setItemId] = useState('');
   const [isCopied, setIsCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'links' | 'other'>('all');
+  const [activeTab, setActiveTab] = useState<TabType>('all');
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [deletingItems, setDeletingItems] = useState<Set<string>>(new Set());
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const openDialog = (id: string, content: string) => {
     setShowModal(true);
     setItemId(id);
     setItemContent(content);
+  }
+
+  const handleFavItem = async (id: string, value: boolean) => {
+    await handleUpdateItem(id, {isFavorite: value});
   }
 
   // Función para copiar texto al portapapeles
@@ -103,14 +111,14 @@ const App: React.FC = () => {
   };
 
   // Función para actualizar el contenido de un elemento
-  const handleUpdateItem = async (id: string, newContent: string) => {
+  const handleUpdateItem = async (id: string, newItem: Partial<ClipboardItem>) => {
     try {
       // Si estamos autenticados, actualizar en Firestore
       if (authState.user && !authState.isLoading) {
-        await syncActions.updateItem(id, { content: newContent });
+        await syncActions.updateItem(id, newItem);
       } else {
         // Si no, actualizar localmente
-        await window.electronAPI.updateClipboardItem(id, newContent);
+        await window.electronAPI.updateClipboardItem(id, newItem);
         const updatedHistory = await window.electronAPI.getClipboardHistory();
         setClipboardHistory(updatedHistory);
       }
@@ -130,6 +138,22 @@ const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
   }, [isDarkMode]);
+  
+  // Efecto para manejar el atajo de teclado Ctrl+F
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Detectar Ctrl+F
+      if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault(); // Prevenir el comportamiento por defecto del navegador
+        setIsSearchOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
 
   return (
     <motion.div 
@@ -169,13 +193,28 @@ const App: React.FC = () => {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <SearchModal
+          isOpen={isSearchOpen}
+          onClose={() => {
+            setIsSearchOpen(false);
+            setSearchTerm('');
+          }}
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          clipboardHistory={clipboardHistory}
+          isDarkMode={isDarkMode}
+          handleDeleteItem={handleDeleteItem}
+          handleFavItem={handleFavItem}
+          onOpenDialog={openDialog}
+        />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 pb-16">
           <ClipboardItemsList 
             clipboardHistory={clipboardHistory}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             handleDeleteItem={handleDeleteItem}
             onOpenDialog={openDialog}
+            handleFavItem={handleFavItem}
           />
                 
           <AnimatePresence>
@@ -188,7 +227,7 @@ const App: React.FC = () => {
                   onCopy={handleCopyToClipboard}
                 isCopied={isCopied}
                 isDarkMode={isDarkMode}
-                onSave={(newContent) => handleUpdateItem(itemId, newContent)}
+                onSave={(newContent) => handleUpdateItem(itemId, {content: newContent})}
               />
             )}
           </AnimatePresence>
