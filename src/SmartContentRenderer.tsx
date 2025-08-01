@@ -1,10 +1,19 @@
-import React from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { oneDark, oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { motion } from 'framer-motion';
-import { Code, FileText, Link, Hash, Image as ImageIcon } from 'lucide-react';
+import { Code, FileText, Link, Hash, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { LinkPreview } from './LinkPreview';
+
+// Importación diferida de SyntaxHighlighter para mejorar el rendimiento
+const SyntaxHighlighter = lazy(() => import('react-syntax-highlighter').then(module => ({ 
+  default: module.Prism 
+})));
+
+// Importación diferida de estilos
+const importStyles = () => import('react-syntax-highlighter/dist/esm/styles/prism').then(styles => ({
+  oneDark: styles.oneDark,
+  oneLight: styles.oneLight
+}));
 
 interface SmartContentRendererProps {
   content: string;
@@ -16,6 +25,8 @@ const detectContentType = (content: string): {
   type: 'code' | 'markdown' | 'url' | 'image' | 'json' | 'text';
   language?: string;
 } => {
+  // measure time
+  const startTime = performance.now();
   const trimmed = content.trim();
   
   // Optimización: solo analizar las primeras 50 líneas para archivos grandes
@@ -23,11 +34,27 @@ const detectContentType = (content: string): {
   const sampleContent = lines.length > 50 ? lines.slice(0, 50).join('\n') : trimmed;
   const sampleTrimmed = sampleContent.trim();
   
-  // Detectar imágenes (URLs de imagen o rutas locales) - usar contenido completo para URLs
+  // Detectar imágenes (URLs de imagen, rutas locales o base64) - usar contenido completo para URLs
   const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i;
-  const imageUrlRegex = /^https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|bmp|webp|svg)(\?[^\s]*)?$/i;
   
-  if (imageExtensions.test(trimmed) || imageUrlRegex.test(trimmed)) {
+  // Expresión regular mejorada para URLs de imágenes
+  // 1. URLs que terminan con extensión de imagen
+  const standardImageUrlRegex = /^https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|bmp|webp|svg)(\?[^\s]*)?$/i;
+  
+  // 2. URLs específicas de servicios de imágenes conocidos
+  const imageServiceUrlRegex = /^https?:\/\/([^\s]+\.(googleusercontent|gstatic)\.com\/images|[^\s]+\.cloudfront\.net\/photos|[^\s]+\.cdninstagram\.com|[^\s]+\.pinimg\.com|[^\s]+\.imgur\.com|[^\s]+\.flickr\.com\/photos)/i;
+  
+  // 3. URLs que contienen palabras clave de imagen en la ruta
+  const imageKeywordUrlRegex = /^https?:\/\/[^\s]+([\/=]images?[\/=]|[\/=]photos?[\/=]|[\/=]pictures?[\/=]|[\/=]thumbnails?[\/=])/i;
+  
+  // Detectar imágenes en formato base64
+  const base64ImageRegex = /^data:image\/(jpeg|jpg|png|gif|bmp|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/i;
+  
+  if (imageExtensions.test(trimmed) || 
+      standardImageUrlRegex.test(trimmed) || 
+      imageServiceUrlRegex.test(trimmed) || 
+      imageKeywordUrlRegex.test(trimmed) || 
+      base64ImageRegex.test(trimmed)) {
     return { type: 'image' };
   }
   
@@ -142,7 +169,31 @@ export const SmartContentRenderer: React.FC<SmartContentRendererProps> = ({
   content, 
   isDarkMode = false 
 }) => {
+  const [isHighlighterLoading, setIsHighlighterLoading] = useState(true);
+  const [highlighterStyles, setHighlighterStyles] = useState<{ oneDark: any; oneLight: any } | null>(null);
+  
+  // Detectar tipo de contenido primero
   const { type, language } = detectContentType(content);
+  
+  // Cargar estilos de forma diferida
+  useEffect(() => {
+    const needsHighlighter = type === 'code' || type === 'json' || type === 'markdown';
+    
+    if (needsHighlighter && !highlighterStyles) {
+      importStyles().then(styles => {
+        setHighlighterStyles(styles);
+        setIsHighlighterLoading(false);
+      });
+    } else if (!needsHighlighter) {
+      // Si no necesita resaltador, establecer como no cargando inmediatamente
+      setIsHighlighterLoading(false);
+    }
+    
+    // Cleanup function
+    return () => {
+      // No es necesario hacer nada en la limpieza
+    };
+  }, [type, content]);
   
   const getIcon = () => {
     switch (type) {
@@ -193,58 +244,90 @@ export const SmartContentRenderer: React.FC<SmartContentRendererProps> = ({
 
       {/* Contenido renderizado */}
       <motion.div
-        className="flex-1 overflow-auto"
+        className="flex-1 overflow-auto relative"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        {type === 'code' || type === 'json' ? (
-          <SyntaxHighlighter
-            language={language || 'text'}
-            style={isDarkMode ? oneDark : oneLight}
-            customStyle={{
-              margin: 0,
-              borderRadius: '6px',
-              fontSize: '12px',
-              lineHeight: '1.4',
-              height: '100%',
-              overflow: 'auto'
-            }}
-            showLineNumbers={content.split('\n').length > 10}
-            wrapLines={true}
-            wrapLongLines={true}
-          >
-            {content}
-          </SyntaxHighlighter>
-        ) : type === 'markdown' ? (
-          <div className="prose prose-xs dark:prose-invert max-w-none h-full overflow-auto">
-            <ReactMarkdown
-              components={{
-                code({ className, children, ...props }: any) {
-                  const match = /language-(\w+)/.exec(className || '');
-                  const isInline = !match;
-                  return !isInline ? (
-                    <SyntaxHighlighter
-                      style={isDarkMode ? oneDark : oneLight}
-                      language={match[1]}
-                      PreTag="div"
-                      customStyle={{
-                        fontSize: '12px',
-                        borderRadius: '4px',
-                      } as any}
-                    >
-                      {String(children).replace(/\n$/, '')}
-                    </SyntaxHighlighter>
-                  ) : (
-                    <code className={className} {...props}>
-                      {children}
-                    </code>
-                  );
-                },
+        {isHighlighterLoading && (type === 'code' || type === 'json' || type === 'markdown') ? (
+          <div className="flex items-center justify-center h-full w-full bg-gray-50 dark:bg-gray-800 rounded-lg p-3" style={{ minHeight: '200px' }}>
+            <div className="flex flex-col items-center space-y-2">
+              <Loader2 className="w-6 h-6 animate-spin text-gray-500 dark:text-gray-400" />
+              <span className="text-xs text-gray-500 dark:text-gray-400">Cargando...</span>
+            </div>
+          </div>
+        ) : (type === 'code' || type === 'json') ? (
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-full w-full bg-gray-50 dark:bg-gray-800 rounded-lg p-3" style={{ minHeight: '200px' }}>
+            <div className="flex flex-col items-center space-y-2">
+              <Loader2 className="w-6 h-6 animate-spin text-gray-500 dark:text-gray-400" />
+              <span className="text-xs text-gray-500 dark:text-gray-400">Cargando...</span>
+            </div>
+          </div>
+          }>
+            <SyntaxHighlighter
+              language={language || 'text'}
+              style={highlighterStyles ? (isDarkMode ? highlighterStyles.oneDark : highlighterStyles.oneLight) : {}}
+              customStyle={{
+                margin: 0,
+                borderRadius: '6px',
+                fontSize: '12px',
+                lineHeight: '1.4',
+                height: '100%',
+                overflow: 'auto'
               }}
+              showLineNumbers={content.split('\n').length > 10}
+              wrapLines={true}
+              wrapLongLines={true}
             >
               {content}
-            </ReactMarkdown>
+            </SyntaxHighlighter>
+          </Suspense>
+        ) : type === 'markdown' ? (
+          <div className="prose prose-xs dark:prose-invert max-w-none h-full overflow-auto">
+            {isHighlighterLoading ? (
+              <div className="flex items-center justify-center h-full w-full bg-gray-50 dark:bg-gray-800 rounded-lg p-3" style={{ minHeight: '200px' }}>
+                <div className="flex flex-col items-center space-y-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-gray-500 dark:text-gray-400" />
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Cargando...</span>
+                </div>
+              </div>
+            ) : (
+              <ReactMarkdown
+                components={{
+                  code({ className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    const isInline = !match;
+                    return !isInline ? (
+                      <Suspense fallback={
+                        <div className="bg-gray-100 dark:bg-gray-800 rounded p-2 text-xs" style={{ minHeight: '50px' }}>
+                          <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                          Cargando...
+                        </div>
+                      }>
+                        <SyntaxHighlighter
+                          style={highlighterStyles ? (isDarkMode ? highlighterStyles.oneDark : highlighterStyles.oneLight) : {}}
+                          language={match[1]}
+                          PreTag="div"
+                          customStyle={{
+                            fontSize: '12px',
+                            borderRadius: '4px',
+                          } as any}
+                        >
+                          {String(children).replace(/\n$/, '')}
+                        </SyntaxHighlighter>
+                      </Suspense>
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
+                }}
+              >
+                {content}
+              </ReactMarkdown>
+            )}
           </div>
         ) : type === 'image' ? (
           <div className="space-y-3">
